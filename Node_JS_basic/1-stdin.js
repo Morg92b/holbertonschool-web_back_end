@@ -6,3 +6,5 @@ process.stdin.on('data', (input) => {
   console.log('This important software is now closing');
   process.exit();
 });
+
+module.exports = {};
