@@ -1,73 +1,34 @@
 const http = require('http');
-const fs = require('fs').promises;
 
-async function countStudents(path) {
-  try {
-    const data = await fs.readFile(path, 'utf-8');
+const countStudents = require('./3-read_file_async');
 
-    const lines = data.split('\n').filter((line) => line.trim() !== '');
+const filename = process.argv[2];
 
-    if (lines.length <= 1) {
-      throw new Error('Cannot load the database');
-    }
+const port = 1245;
 
-    const studentData = lines.slice(1);
+const app = http.createServer(async (request, response) => {
+  response.writeHead(200, {
+    'Content-Type': 'text/html',
+  });
 
-    const fields = {};
-    studentData.forEach((line) => {
-      const [firstname, , , field] = line.split(',');
-
-      if (firstname && field) {
-        if (!fields[field]) {
-          fields[field] = [];
-        }
-        fields[field].push(firstname);
-      }
-    });
-
-    const totalStudents = Object.values(fields).reduce((acc, curr) => acc + curr.length, 0);
-    let response = `Number of students: ${totalStudents}\n`;
-
-    for (const [field, students] of Object.entries(fields)) {
-      response += `Number of students in ${field}: ${students.length}. List: ${students.join(', ')}\n`;
-    }
-
-    return response;
-  } catch (err) {
-    throw new Error('Cannot load the database');
-  }
-}
-
-const app = http.createServer(async (req, res) => {
-  const { url } = req;
-
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/plain');
-
-  if (url === '/') {
-    res.end('Hello Holberton School!\n');
-  } else if (url === '/students') {
-    const dbFile = process.argv[2];
-
-    if (!dbFile) {
-      res.end('Cannot load the database\n');
-      return;
-    }
+  if (request.url === '/') {
+    response.write('Hello Holberton School!');
+    response.end();
+  } else if (request.url === '/students') {
+    response.write('This is the list of our students\n');
 
     try {
-      const studentsList = await countStudents(dbFile);
-      res.end(`This is the list of our students\n${studentsList}`);
+      const students = await countStudents(filename);
+      response.end(`${students.join('\n')}`);
     } catch (error) {
-      res.end('Cannot load the database\n');
+      response.end(error.message);
     }
   } else {
-    res.statusCode = 404;
-    res.end('Not Found\n');
+    response.statusCode = 404;
+    response.end('Not Found\n');
   }
 });
 
-app.listen(1245, () => {
-  console.log('Server running at http://localhost:1245/');
-});
+app.listen(port);
 
 module.exports = app;
